@@ -1,0 +1,51 @@
+================================================================================
+CONVERSATION EXPORT
+Date: 2026-04-29
+================================================================================
+
+USER:
+make a game review game Search or pick a game
+Write a review
+Saves reviews using localStorage but no profiles
+
+--------------------------------------------------------------------------------
+
+ASSISTANT:
+I'll build a single-file game review app with search, review writing, and
+localStorage persistence.
+
+[Created /Users/jasminebutterfield/game-review/index.html]
+
+Your GameLog app is ready. Here's what it includes:
+
+Search / Pick
+- Grid of 24 popular games (searchable by title or genre)
+- Green dot on cards you've already reviewed, with your average rating shown
+- "Add" field at the bottom for any game not in the list
+
+Write a Review
+- 5-star rating with hover preview and labels (Poor → Amazing)
+- Full review text area
+- Optional Pros / Cons fields side by side
+- Edit an existing review from the reviews list
+
+My Reviews
+- Sort by Newest, Oldest, Highest or Lowest rated
+- Each card shows stars, date, review body, and pros/cons blocks
+- Edit and Delete buttons (delete requires confirmation)
+- All data saved to localStorage — persists across sessions, no login needed
+
+--------------------------------------------------------------------------------
+
+USER:
+export this conversation as a txt and add a readme to the folder
+
+--------------------------------------------------------------------------------
+
+ASSISTANT:
+[Created /Users/jasminebutterfield/game-review/conversation.txt]
+[Created /Users/jasminebutterfield/game-review/README.md]
+
+================================================================================
+END OF CONVERSATION
+================================================================================

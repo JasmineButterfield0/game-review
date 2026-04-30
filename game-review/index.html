@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GameLog — Review Your Games</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f0f13;
+      --surface: #1a1a24;
+      --surface2: #22222f;
+      --border: #2e2e3e;
+      --accent: #7c6af5;
+      --accent2: #a78bfa;
+      --accent-glow: rgba(124,106,245,0.25);
+      --text: #e8e8f0;
+      --muted: #7878a0;
+      --star: #f5c542;
+      --red: #f56060;
+      --green: #5cf5a0;
+      --radius: 12px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── Layout ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 60px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .logo { font-size: 1.3rem; font-weight: 700; letter-spacing: -0.5px; }
+    .logo span { color: var(--accent2); }
+    .nav-tabs { display: flex; gap: 4px; }
+    .nav-tab {
+      background: none; border: none; color: var(--muted);
+      padding: 8px 16px; border-radius: 8px; cursor: pointer;
+      font-size: 0.9rem; font-weight: 500; transition: all 0.15s;
+    }
+    .nav-tab:hover { background: var(--surface2); color: var(--text); }
+    .nav-tab.active { background: var(--accent); color: #fff; }
+
+    main { max-width: 860px; margin: 0 auto; padding: 32px 20px; }
+
+    /* ── Views ── */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* ── Search / Pick ── */
+    .search-box {
+      position: relative; margin-bottom: 24px;
+    }
+    .search-box input {
+      width: 100%; background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px 48px 14px 18px;
+      color: var(--text); font-size: 1rem; outline: none; transition: border 0.15s;
+    }
+    .search-box input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+    .search-box input::placeholder { color: var(--muted); }
+    .search-icon {
+      position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+      color: var(--muted); pointer-events: none; font-size: 1.1rem;
+    }
+
+    .section-title {
+      font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 1px; color: var(--muted); margin-bottom: 12px;
+    }
+
+    .game-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+      gap: 14px;
+    }
+    .game-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 18px 16px;
+      cursor: pointer; transition: all 0.15s; position: relative;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .game-card:hover {
+      border-color: var(--accent); background: var(--surface2);
+      transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    .game-card .genre-badge {
+      font-size: 0.7rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.5px; color: var(--accent2);
+    }
+    .game-card .game-title { font-weight: 600; font-size: 0.95rem; line-height: 1.3; }
+    .game-card .game-year { font-size: 0.8rem; color: var(--muted); }
+    .game-card .reviewed-dot {
+      position: absolute; top: 12px; right: 12px;
+      width: 8px; height: 8px; border-radius: 50%; background: var(--green);
+    }
+    .game-card .card-avg {
+      display: flex; align-items: center; gap: 4px;
+      font-size: 0.8rem; color: var(--star); margin-top: 2px;
+    }
+
+    .custom-game-row {
+      margin-top: 20px;
+      display: flex; gap: 10px; align-items: flex-start;
+    }
+    .custom-game-row input {
+      flex: 1; background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 12px 16px;
+      color: var(--text); font-size: 0.95rem; outline: none; transition: border 0.15s;
+    }
+    .custom-game-row input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+    .custom-game-row input::placeholder { color: var(--muted); }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      border: none; border-radius: 8px; padding: 10px 18px;
+      font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.15s;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: #6b59e0; }
+    .btn-ghost {
+      background: var(--surface2); color: var(--muted);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover { color: var(--text); border-color: var(--muted); }
+    .btn-danger { background: rgba(245,96,96,0.15); color: var(--red); border: 1px solid rgba(245,96,96,0.3); }
+    .btn-danger:hover { background: rgba(245,96,96,0.25); }
+    .btn-sm { padding: 6px 12px; font-size: 0.8rem; }
+
+    /* ── Review Form ── */
+    .back-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: none; border: none; color: var(--muted); cursor: pointer;
+      font-size: 0.9rem; margin-bottom: 24px; padding: 0; transition: color 0.15s;
+    }
+    .back-btn:hover { color: var(--text); }
+
+    .form-game-header {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      margin-bottom: 28px; gap: 12px;
+    }
+    .form-game-name {
+      font-size: 1.6rem; font-weight: 700; line-height: 1.2;
+    }
+    .form-game-meta { color: var(--muted); font-size: 0.9rem; margin-top: 4px; }
+
+    .form-section { margin-bottom: 24px; }
+    .form-label {
+      display: block; font-size: 0.8rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.8px;
+      color: var(--muted); margin-bottom: 8px;
+    }
+
+    /* Star rating */
+    .star-rating { display: flex; gap: 6px; }
+    .star-btn {
+      background: none; border: none; font-size: 1.8rem; cursor: pointer;
+      color: var(--border); transition: color 0.1s, transform 0.1s;
+      line-height: 1;
+    }
+    .star-btn:hover, .star-btn.lit { color: var(--star); }
+    .star-btn:hover { transform: scale(1.15); }
+    .star-label {
+      margin-left: 10px; font-size: 0.85rem; color: var(--muted);
+      align-self: center;
+    }
+
+    textarea {
+      width: 100%; background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px 16px; color: var(--text);
+      font-size: 0.95rem; font-family: inherit; resize: vertical;
+      min-height: 140px; outline: none; transition: border 0.15s; line-height: 1.6;
+    }
+    textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+    textarea::placeholder { color: var(--muted); }
+
+    .pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .pros-cons textarea { min-height: 90px; }
+    .pro-label { color: var(--green); }
+    .con-label { color: var(--red); }
+
+    .form-actions { display: flex; gap: 10px; margin-top: 28px; }
+
+    /* ── Reviews List ── */
+    .reviews-header {
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px;
+    }
+    .reviews-count { font-size: 0.85rem; color: var(--muted); }
+
+    .sort-bar {
+      display: flex; gap: 6px; margin-bottom: 20px;
+    }
+    .sort-btn {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 6px; padding: 6px 12px; font-size: 0.8rem; color: var(--muted);
+      cursor: pointer; transition: all 0.15s;
+    }
+    .sort-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+    .review-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 20px; margin-bottom: 14px;
+      transition: border-color 0.15s;
+    }
+    .review-card:hover { border-color: var(--border); }
+
+    .review-card-top {
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+    }
+    .review-game-title { font-weight: 700; font-size: 1.05rem; }
+    .review-game-genre { font-size: 0.75rem; color: var(--accent2); margin-top: 2px; }
+    .review-meta {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 8px;
+    }
+    .stars-display { color: var(--star); font-size: 0.95rem; letter-spacing: 1px; }
+    .review-date { font-size: 0.75rem; color: var(--muted); }
+
+    .review-body { margin-top: 14px; font-size: 0.9rem; line-height: 1.65; color: #c4c4d8; }
+
+    .pros-cons-display {
+      display: flex; gap: 12px; margin-top: 12px; flex-wrap: wrap;
+    }
+    .pc-block {
+      flex: 1; min-width: 160px; background: var(--surface2);
+      border-radius: 8px; padding: 10px 12px;
+    }
+    .pc-block .pc-title {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.5px; margin-bottom: 6px;
+    }
+    .pc-block .pc-title.pro { color: var(--green); }
+    .pc-block .pc-title.con { color: var(--red); }
+    .pc-block p { font-size: 0.82rem; color: var(--muted); line-height: 1.5; white-space: pre-wrap; }
+
+    .review-card-actions {
+      display: flex; gap: 8px; margin-top: 16px; padding-top: 14px;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ── Empty states ── */
+    .empty-state {
+      text-align: center; padding: 60px 20px; color: var(--muted);
+    }
+    .empty-icon { font-size: 3rem; margin-bottom: 12px; }
+    .empty-state h3 { font-size: 1.1rem; color: var(--text); margin-bottom: 6px; }
+    .empty-state p { font-size: 0.9rem; }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 12px 20px; font-size: 0.9rem;
+      transition: transform 0.3s ease; z-index: 999; white-space: nowrap;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast.success { border-color: var(--green); color: var(--green); }
+    .toast.error { border-color: var(--red); color: var(--red); }
+
+    /* ── Modal (confirm delete) ── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.65); z-index: 200; align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 28px; width: 100%; max-width: 360px; text-align: center;
+    }
+    .modal h3 { margin-bottom: 10px; }
+    .modal p { color: var(--muted); font-size: 0.9rem; margin-bottom: 20px; }
+    .modal-actions { display: flex; gap: 10px; justify-content: center; }
+
+    @media (max-width: 600px) {
+      .pros-cons { grid-template-columns: 1fr; }
+      .game-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+      .nav-tabs .nav-tab { padding: 8px 10px; font-size: 0.8rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Game<span>Log</span></div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showView('search')">&#x1F50D; Search</button>
+    <button class="nav-tab" onclick="showView('reviews')">&#x1F4DD; My Reviews</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- ── SEARCH VIEW ── -->
+  <div id="view-search" class="view active">
+    <div class="search-box">
+      <input id="searchInput" type="text" placeholder="Search for a game…" oninput="filterGames()" autocomplete="off" />
+      <span class="search-icon">&#x2315;</span>
+    </div>
+    <p class="section-title">Popular Games</p>
+    <div class="game-grid" id="gameGrid"></div>
+
+    <div class="custom-game-row">
+      <input id="customGameInput" type="text" placeholder="Don't see your game? Type its name here…" />
+      <button class="btn btn-primary" onclick="pickCustomGame()">+ Add</button>
+    </div>
+  </div>
+
+  <!-- ── WRITE REVIEW VIEW ── -->
+  <div id="view-write" class="view">
+    <button class="back-btn" onclick="showView('search')">&#x2190; Back</button>
+    <div class="form-game-header">
+      <div>
+        <div class="form-game-name" id="formGameName"></div>
+        <div class="form-game-meta" id="formGameMeta"></div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <label class="form-label">Your Rating</label>
+      <div class="star-rating" id="starRating">
+        <button class="star-btn" data-val="1" onclick="setRating(1)">&#9733;</button>
+        <button class="star-btn" data-val="2" onclick="setRating(2)">&#9733;</button>
+        <button class="star-btn" data-val="3" onclick="setRating(3)">&#9733;</button>
+        <button class="star-btn" data-val="4" onclick="setRating(4)">&#9733;</button>
+        <button class="star-btn" data-val="5" onclick="setRating(5)">&#9733;</button>
+        <span class="star-label" id="ratingLabel">Tap to rate</span>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <label class="form-label">Your Review</label>
+      <textarea id="reviewText" placeholder="What did you think? Share your experience…"></textarea>
+    </div>
+
+    <div class="form-section">
+      <label class="form-label">Pros &amp; Cons <span style="font-size:0.7rem;font-weight:400;text-transform:none;">(optional)</span></label>
+      <div class="pros-cons">
+        <div>
+          <label class="form-label pro-label" style="margin-bottom:6px;">&#x2795; Pros</label>
+          <textarea id="prosText" placeholder="What did you love?" style="min-height:90px;"></textarea>
+        </div>
+        <div>
+          <label class="form-label con-label" style="margin-bottom:6px;">&#x2796; Cons</label>
+          <textarea id="consText" placeholder="What fell short?" style="min-height:90px;"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn btn-primary" onclick="saveReview()">Save Review</button>
+      <button class="btn btn-ghost" onclick="showView('search')">Cancel</button>
+    </div>
+  </div>
+
+  <!-- ── MY REVIEWS VIEW ── -->
+  <div id="view-reviews" class="view">
+    <div class="reviews-header">
+      <div>
+        <h2 style="font-size:1.3rem;margin-bottom:2px;">My Reviews</h2>
+        <div class="reviews-count" id="reviewsCount"></div>
+      </div>
+    </div>
+    <div class="sort-bar">
+      <button class="sort-btn active" data-sort="newest" onclick="sortReviews('newest')">Newest</button>
+      <button class="sort-btn" data-sort="oldest" onclick="sortReviews('oldest')">Oldest</button>
+      <button class="sort-btn" data-sort="highest" onclick="sortReviews('highest')">Highest Rated</button>
+      <button class="sort-btn" data-sort="lowest" onclick="sortReviews('lowest')">Lowest Rated</button>
+    </div>
+    <div id="reviewsList"></div>
+  </div>
+
+</main>
+
+<!-- Delete confirm modal -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal">
+    <h3>Delete Review?</h3>
+    <p>This can't be undone.</p>
+    <div class="modal-actions">
+      <button class="btn btn-danger" onclick="confirmDelete()">Delete</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ── Data ──────────────────────────────────────────────────────────────────
+  const GAMES = [
+    { title: "Elden Ring", year: 2022, genre: "Action RPG" },
+    { title: "The Legend of Zelda: Tears of the Kingdom", year: 2023, genre: "Adventure" },
+    { title: "Baldur's Gate 3", year: 2023, genre: "RPG" },
+    { title: "God of War Ragnarök", year: 2022, genre: "Action Adventure" },
+    { title: "Red Dead Redemption 2", year: 2018, genre: "Open World" },
+    { title: "Hades", year: 2020, genre: "Roguelike" },
+    { title: "Cyberpunk 2077", year: 2020, genre: "Action RPG" },
+    { title: "Hollow Knight", year: 2017, genre: "Metroidvania" },
+    { title: "Disco Elysium", year: 2019, genre: "RPG" },
+    { title: "The Witcher 3", year: 2015, genre: "RPG" },
+    { title: "Dark Souls III", year: 2016, genre: "Action RPG" },
+    { title: "Sekiro: Shadows Die Twice", year: 2019, genre: "Action" },
+    { title: "Stardew Valley", year: 2016, genre: "Simulation" },
+    { title: "Celeste", year: 2018, genre: "Platformer" },
+    { title: "Minecraft", year: 2011, genre: "Sandbox" },
+    { title: "Doom Eternal", year: 2020, genre: "FPS" },
+    { title: "Ghost of Tsushima", year: 2020, genre: "Action Adventure" },
+    { title: "Spider-Man 2", year: 2023, genre: "Action Adventure" },
+    { title: "Starfield", year: 2023, genre: "RPG" },
+    { title: "Resident Evil 4 Remake", year: 2023, genre: "Survival Horror" },
+    { title: "Persona 5 Royal", year: 2019, genre: "JRPG" },
+    { title: "Final Fantasy XVI", year: 2023, genre: "Action RPG" },
+    { title: "Dave the Diver", year: 2023, genre: "Adventure" },
+    { title: "Lies of P", year: 2023, genre: "Soulslike" },
+  ];
+
+  const STORAGE_KEY = 'gamelog_reviews';
+  let currentGame = null;
+  let currentRating = 0;
+  let currentSort = 'newest';
+  let pendingDeleteId = null;
+
+  function loadReviews() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+    catch { return []; }
+  }
+  function saveReviews(reviews) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(reviews));
+  }
+
+  // ── Views ─────────────────────────────────────────────────────────────────
+  function showView(name) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('view-' + name).classList.add('active');
+    const tabMap = { search: 0, write: 0, reviews: 1 };
+    document.querySelectorAll('.nav-tab')[tabMap[name]].classList.add('active');
+    if (name === 'reviews') renderReviews();
+    if (name === 'search') renderGameGrid(document.getElementById('searchInput').value);
+  }
+
+  // ── Search / Game Grid ────────────────────────────────────────────────────
+  function filterGames() {
+    renderGameGrid(document.getElementById('searchInput').value);
+  }
+
+  function renderGameGrid(query = '') {
+    const reviews = loadReviews();
+    const q = query.trim().toLowerCase();
+    const filtered = q
+      ? GAMES.filter(g => g.title.toLowerCase().includes(q) || g.genre.toLowerCase().includes(q))
+      : GAMES;
+
+    const grid = document.getElementById('gameGrid');
+    grid.innerHTML = '';
+
+    if (!filtered.length) {
+      grid.innerHTML = '<div style="color:var(--muted);font-size:0.9rem;padding:8px 0;">No games match your search. Use "Add" below to review any game.</div>';
+      return;
+    }
+
+    filtered.forEach(g => {
+      const existing = reviews.filter(r => r.gameTitle === g.title);
+      const hasReview = existing.length > 0;
+      const avg = hasReview
+        ? (existing.reduce((s, r) => s + r.rating, 0) / existing.length).toFixed(1)
+        : null;
+
+      const card = document.createElement('div');
+      card.className = 'game-card';
+      card.innerHTML = `
+        ${hasReview ? '<div class="reviewed-dot" title="Reviewed"></div>' : ''}
+        <div class="genre-badge">${g.genre}</div>
+        <div class="game-title">${g.title}</div>
+        <div class="game-year">${g.year}</div>
+        ${avg ? `<div class="card-avg">&#9733; ${avg}</div>` : ''}
+      `;
+      card.onclick = () => openWriteForm(g);
+      grid.appendChild(card);
+    });
+  }
+
+  function pickCustomGame() {
+    const val = document.getElementById('customGameInput').value.trim();
+    if (!val) { showToast('Enter a game name first', 'error'); return; }
+    openWriteForm({ title: val, year: '', genre: 'Custom' });
+    document.getElementById('customGameInput').value = '';
+  }
+
+  // ── Write Review ──────────────────────────────────────────────────────────
+  function openWriteForm(game, existingReview = null) {
+    currentGame = game;
+    currentRating = existingReview ? existingReview.rating : 0;
+    document.getElementById('formGameName').textContent = game.title;
+    document.getElementById('formGameMeta').textContent = [game.genre, game.year].filter(Boolean).join(' · ');
+    document.getElementById('reviewText').value = existingReview ? existingReview.body : '';
+    document.getElementById('prosText').value = existingReview ? (existingReview.pros || '') : '';
+    document.getElementById('consText').value = existingReview ? (existingReview.cons || '') : '';
+    document.getElementById('view-write').dataset.editId = existingReview ? existingReview.id : '';
+    updateStars(currentRating);
+    showView('write');
+    document.getElementById('reviewText').focus();
+  }
+
+  function setRating(val) {
+    currentRating = val;
+    updateStars(val);
+  }
+
+  function updateStars(val) {
+    const labels = ['', 'Poor', 'Fair', 'Good', 'Great', 'Amazing'];
+    document.querySelectorAll('.star-btn').forEach(btn => {
+      btn.classList.toggle('lit', parseInt(btn.dataset.val) <= val);
+    });
+    document.getElementById('ratingLabel').textContent = val ? labels[val] : 'Tap to rate';
+  }
+
+  document.getElementById('starRating').addEventListener('mouseover', e => {
+    const btn = e.target.closest('.star-btn');
+    if (!btn) return;
+    const val = parseInt(btn.dataset.val);
+    document.querySelectorAll('.star-btn').forEach(b => {
+      b.style.color = parseInt(b.dataset.val) <= val ? 'var(--star)' : 'var(--border)';
+    });
+  });
+  document.getElementById('starRating').addEventListener('mouseleave', () => {
+    updateStars(currentRating);
+    document.querySelectorAll('.star-btn').forEach(b => b.style.color = '');
+  });
+
+  function saveReview() {
+    if (!currentRating) { showToast('Please give a star rating', 'error'); return; }
+    const body = document.getElementById('reviewText').value.trim();
+    if (!body) { showToast('Please write something in your review', 'error'); return; }
+
+    const reviews = loadReviews();
+    const editId = document.getElementById('view-write').dataset.editId;
+
+    const entry = {
+      id: editId || Date.now().toString(),
+      gameTitle: currentGame.title,
+      gameGenre: currentGame.genre,
+      gameYear: currentGame.year,
+      rating: currentRating,
+      body,
+      pros: document.getElementById('prosText').value.trim(),
+      cons: document.getElementById('consText').value.trim(),
+      date: editId
+        ? (reviews.find(r => r.id === editId)?.date || new Date().toISOString())
+        : new Date().toISOString(),
+      updatedAt: editId ? new Date().toISOString() : null,
+    };
+
+    if (editId) {
+      const idx = reviews.findIndex(r => r.id === editId);
+      if (idx !== -1) reviews[idx] = entry;
+    } else {
+      reviews.unshift(entry);
+    }
+
+    saveReviews(reviews);
+    showToast(editId ? 'Review updated!' : 'Review saved!', 'success');
+    showView('reviews');
+  }
+
+  // ── Reviews List ──────────────────────────────────────────────────────────
+  function sortReviews(key) {
+    currentSort = key;
+    document.querySelectorAll('.sort-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.sort === key);
+    });
+    renderReviews();
+  }
+
+  function renderReviews() {
+    let reviews = loadReviews();
+    const container = document.getElementById('reviewsList');
+    const countEl = document.getElementById('reviewsCount');
+
+    countEl.textContent = reviews.length === 0
+      ? 'No reviews yet'
+      : `${reviews.length} review${reviews.length !== 1 ? 's' : ''}`;
+
+    if (!reviews.length) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">&#x1F3AE;</div>
+          <h3>No reviews yet</h3>
+          <p>Search for a game and write your first review!</p>
+        </div>`;
+      return;
+    }
+
+    const sorted = [...reviews].sort((a, b) => {
+      if (currentSort === 'newest') return new Date(b.date) - new Date(a.date);
+      if (currentSort === 'oldest') return new Date(a.date) - new Date(b.date);
+      if (currentSort === 'highest') return b.rating - a.rating;
+      if (currentSort === 'lowest') return a.rating - b.rating;
+    });
+
+    container.innerHTML = sorted.map(r => {
+      const stars = '★'.repeat(r.rating) + '☆'.repeat(5 - r.rating);
+      const date = new Date(r.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+      const edited = r.updatedAt ? ` · edited ${new Date(r.updatedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})}` : '';
+      return `
+        <div class="review-card">
+          <div class="review-card-top">
+            <div>
+              <div class="review-game-title">${escHtml(r.gameTitle)}</div>
+              <div class="review-game-genre">${escHtml(r.gameGenre)}${r.gameYear ? ' · ' + r.gameYear : ''}</div>
+              <div class="review-meta">
+                <span class="stars-display">${stars}</span>
+                <span class="review-date">${date}${edited}</span>
+              </div>
+            </div>
+          </div>
+          <div class="review-body">${escHtml(r.body)}</div>
+          ${(r.pros || r.cons) ? `
+          <div class="pros-cons-display">
+            ${r.pros ? `<div class="pc-block"><div class="pc-title pro">+ Pros</div><p>${escHtml(r.pros)}</p></div>` : ''}
+            ${r.cons ? `<div class="pc-block"><div class="pc-title con">− Cons</div><p>${escHtml(r.cons)}</p></div>` : ''}
+          </div>` : ''}
+          <div class="review-card-actions">
+            <button class="btn btn-ghost btn-sm" onclick='editReview("${r.id}")'>&#x270E; Edit</button>
+            <button class="btn btn-danger btn-sm" onclick='askDelete("${r.id}")'>&#x1F5D1; Delete</button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function editReview(id) {
+    const reviews = loadReviews();
+    const r = reviews.find(r => r.id === id);
+    if (!r) return;
+    openWriteForm(
+      { title: r.gameTitle, genre: r.gameGenre, year: r.gameYear },
+      r
+    );
+  }
+
+  function askDelete(id) {
+    pendingDeleteId = id;
+    document.getElementById('deleteModal').classList.add('open');
+  }
+  function confirmDelete() {
+    if (!pendingDeleteId) return;
+    const reviews = loadReviews().filter(r => r.id !== pendingDeleteId);
+    saveReviews(reviews);
+    pendingDeleteId = null;
+    closeModal();
+    renderReviews();
+    showToast('Review deleted', 'success');
+  }
+  function closeModal() {
+    document.getElementById('deleteModal').classList.remove('open');
+    pendingDeleteId = null;
+  }
+
+  // ── Utilities ─────────────────────────────────────────────────────────────
+  function escHtml(s) {
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  let toastTimer;
+  function showToast(msg, type = '') {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = 'toast show ' + type;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { el.className = 'toast ' + type; }, 2400);
+  }
+
+  // close modal on overlay click
+  document.getElementById('deleteModal').addEventListener('click', e => {
+    if (e.target === document.getElementById('deleteModal')) closeModal();
+  });
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  renderGameGrid();
+</script>
+</body>
+</html>
